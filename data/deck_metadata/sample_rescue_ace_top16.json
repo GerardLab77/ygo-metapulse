@@ -1,0 +1,10 @@
+{
+  "event_name": "Premier Cup North",
+  "event_date": "2026-02-28",
+  "placement": "Top 16",
+  "player": "M. Doyle",
+  "archetype": "Rescue-ACE",
+  "format": "TCG Advanced",
+  "source_url": "https://example.com/sample_rescue_ace_top16",
+  "notes": "Illustrative sample data generated from local card metadata for portfolio demo purposes."
+}

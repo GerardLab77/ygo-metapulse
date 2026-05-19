@@ -1,0 +1,10 @@
+{
+  "event_name": "Capital Cup Qualifier",
+  "event_date": "2026-03-29",
+  "placement": "Top 16",
+  "player": "T. Brooks",
+  "archetype": "Purrely",
+  "format": "TCG Advanced",
+  "source_url": "https://example.com/sample_purrely_top16",
+  "notes": "Illustrative sample data generated from local card metadata for portfolio demo purposes."
+}

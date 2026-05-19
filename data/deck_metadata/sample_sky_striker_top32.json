@@ -1,0 +1,10 @@
+{
+  "event_name": "Open Trial Event",
+  "event_date": "2026-02-16",
+  "placement": "Top 32",
+  "player": "N. Carter",
+  "archetype": "Sky Striker",
+  "format": "TCG Advanced",
+  "source_url": "https://example.com/sample_sky_striker_top32",
+  "notes": "Illustrative sample data generated from local card metadata for portfolio demo purposes."
+}

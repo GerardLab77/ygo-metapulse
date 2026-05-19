@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ygo-metapulse"
+version = "0.1.0"
+description = "End-to-end Yu-Gi-Oh! tournament decklist intelligence platform."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "OpenAI Codex" }
+]
+dependencies = [
+  "streamlit>=1.45,<2.0",
+  "pandas>=2.2,<3.0",
+  "requests>=2.32,<3.0",
+  "plotly>=5.24,<6.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q --basetemp=.pytest_tmp -p no:cacheprovider"

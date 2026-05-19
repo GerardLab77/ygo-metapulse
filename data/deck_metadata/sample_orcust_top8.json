@@ -1,0 +1,10 @@
+{
+  "event_name": "Regional Showcase",
+  "event_date": "2026-04-12",
+  "placement": "Top 8",
+  "player": "J. Hall",
+  "archetype": "Orcust",
+  "format": "TCG Advanced",
+  "source_url": "https://example.com/sample_orcust_top8",
+  "notes": "Illustrative sample data generated from local card metadata for portfolio demo purposes."
+}

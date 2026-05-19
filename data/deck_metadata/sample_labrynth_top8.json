@@ -1,0 +1,10 @@
+{
+  "event_name": "Spring Open West",
+  "event_date": "2026-04-05",
+  "placement": "Top 8",
+  "player": "D. Harper",
+  "archetype": "Labrynth",
+  "format": "TCG Advanced",
+  "source_url": "https://example.com/sample_labrynth_top8",
+  "notes": "Illustrative sample data generated from local card metadata for portfolio demo purposes."
+}
