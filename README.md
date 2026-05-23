@@ -1,13 +1,29 @@
-# YGO MetaPulse
+<p align="center">
+  <img src="docs/assets/ygo-metapulse-logo.png" alt="YGO MetaPulse logo" width="240">
+</p>
 
-![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-Warehouse-003B57?logo=sqlite&logoColor=white)
-![pandas](https://img.shields.io/badge/pandas-Analytics-150458?logo=pandas&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-Tested-0A9EDC?logo=pytest&logoColor=white)
-![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+<h1 align="center">YGO MetaPulse</h1>
 
-An end-to-end Yu-Gi-Oh! tournament decklist intelligence platform that ingests `.ydk` decklists, enriches them with YGOPRODeck card metadata, stores everything in SQLite, and turns the result into a polished analytics dashboard.
+<p align="center">
+  <strong>End-to-end tournament decklist intelligence for Yu-Gi-Oh! TCG.</strong>
+</p>
+
+<p align="center">
+  A polished data engineering and analytics portfolio project that ingests decklists, enriches them with card metadata, stores the data in SQLite, and turns competitive trends into an interactive Streamlit dashboard.
+</p>
+
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white">
+  <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-Warehouse-003B57?logo=sqlite&logoColor=white">
+  <img alt="pandas" src="https://img.shields.io/badge/pandas-Analytics-150458?logo=pandas&logoColor=white">
+  <img alt="pytest" src="https://img.shields.io/badge/pytest-Tested-0A9EDC?logo=pytest&logoColor=white">
+  <img alt="CI" src="https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white">
+</p>
+
+## Project Snapshot
+
+YGO MetaPulse takes a familiar hobby dataset and treats it like a real analytics product: raw files are parsed, metadata is cached, records are normalized into a relational database, analytical views are calculated with pandas, and the final insights are presented through a clean dashboard and generated report.
 
 ## Portfolio Positioning
 
@@ -15,7 +31,7 @@ YGO MetaPulse is intentionally designed as a GitHub and CV-ready analytics case 
 
 ## Why I Built It
 
-I wanted a portfolio project that demonstrates more than notebook analysis alone. YGO MetaPulse shows a full data engineering and analytics workflow: API ingestion, local caching, domain-specific parsing, normalized storage, reusable analysis functions, automated tests, and a presentation-ready dashboard.
+I built this to show that data projects do not need to start from perfect corporate datasets to be valuable. The aim was to take a niche, messy, semi-structured source and turn it into something clear, testable, and useful. YGO MetaPulse demonstrates a full data engineering and analytics workflow: API ingestion, local caching, domain-specific parsing, normalized storage, reusable analysis functions, automated tests, and a presentation-ready dashboard.
 
 ## Features
 
@@ -77,6 +93,13 @@ ygo-metapulse/
   requirements.txt
   pyproject.toml
   app.py
+  docs/
+    assets/
+      ygo-metapulse-logo.png
+    screenshots/
+      dashboard-overview.png
+      card-usage.png
+      meta-report.png
   data/
     raw/
       cards_cache.json
