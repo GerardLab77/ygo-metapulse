@@ -7,16 +7,36 @@ from src import ingest
 
 def test_select_deck_files_prefers_real_decks(tmp_path: Path, monkeypatch) -> None:
     decks_dir = tmp_path / "decks"
+    tournament_dir = tmp_path / "tournament_decks"
     decks_dir.mkdir()
+    tournament_dir.mkdir()
     (decks_dir / "sample_demo.ydk").write_text("#main\n100\n", encoding="utf-8")
     (decks_dir / "real_event_top8.ydk").write_text("#main\n200\n", encoding="utf-8")
 
     monkeypatch.setattr(ingest, "DECKS_DIR", decks_dir)
+    monkeypatch.setattr(ingest, "TOURNAMENT_DECKS_DIR", tournament_dir)
 
     selected_files, deck_mode = ingest._select_deck_files()
 
-    assert deck_mode == "real"
+    assert deck_mode == "imported"
     assert [path.name for path in selected_files] == ["real_event_top8.ydk"]
+
+
+def test_select_deck_files_prefers_tournament_decks_over_samples(tmp_path: Path, monkeypatch) -> None:
+    decks_dir = tmp_path / "decks"
+    tournament_dir = tmp_path / "tournament_decks"
+    decks_dir.mkdir()
+    tournament_dir.mkdir()
+    (decks_dir / "sample_demo.ydk").write_text("#main\n100\n", encoding="utf-8")
+    (tournament_dir / "ygoprodeck_123456.ydk").write_text("#main\n200\n", encoding="utf-8")
+
+    monkeypatch.setattr(ingest, "DECKS_DIR", decks_dir)
+    monkeypatch.setattr(ingest, "TOURNAMENT_DECKS_DIR", tournament_dir)
+
+    selected_files, deck_mode = ingest._select_deck_files()
+
+    assert deck_mode == "tournament"
+    assert [path.name for path in selected_files] == ["ygoprodeck_123456.ydk"]
 
 
 def test_ingest_decks_is_idempotent(tmp_path: Path, monkeypatch) -> None:
@@ -71,6 +91,7 @@ def test_ingest_decks_is_idempotent(tmp_path: Path, monkeypatch) -> None:
 
     monkeypatch.setattr(ingest, "DECKS_DIR", decks_dir)
     monkeypatch.setattr(ingest, "DECK_METADATA_DIR", metadata_dir)
+    monkeypatch.setattr(ingest, "TOURNAMENT_DECKS_DIR", tmp_path / "empty_tournament_decks")
     monkeypatch.setattr(ingest, "init_db", lambda: db.init_db(db_path=db_path))
     monkeypatch.setattr(
         ingest,

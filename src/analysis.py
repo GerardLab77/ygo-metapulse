@@ -37,11 +37,13 @@ def load_decks_data(db_path: Path | None = None) -> pd.DataFrame:
 def apply_filters(
     joined_df: pd.DataFrame,
     archetypes: list[str] | None = None,
+    events: list[str] | None = None,
+    placements: list[str] | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
     section: str | None = None,
 ) -> pd.DataFrame:
-    """Apply archetype, date, and section filters to a joined dataframe."""
+    """Apply deck metadata and section filters to a joined dataframe."""
 
     if joined_df.empty:
         return joined_df.copy()
@@ -49,6 +51,10 @@ def apply_filters(
     filtered = joined_df.copy()
     if archetypes:
         filtered = filtered[filtered["deck_archetype"].isin(archetypes)]
+    if events and "event_name" in filtered:
+        filtered = filtered[filtered["event_name"].isin(events)]
+    if placements and "placement" in filtered:
+        filtered = filtered[filtered["placement"].isin(placements)]
     if start_date or end_date:
         filtered["event_date"] = pd.to_datetime(filtered["event_date"], errors="coerce")
         if start_date:
@@ -140,12 +146,12 @@ def archetype_breakdown(
 
     decks = decks_df.copy() if decks_df is not None else load_decks_data(db_path)
     if decks.empty:
-        return pd.DataFrame(columns=["archetype", "deck_count", "sample_percentage", "average_estimated_deck_price"])
+        return pd.DataFrame(columns=["archetype", "deck_count", "deck_share_percent", "average_estimated_deck_price"])
 
     prices = deck_price_estimates(db_path=db_path, joined_df=joined_df)
     total_decks = len(decks)
     grouped = decks.groupby("archetype", dropna=False).agg(deck_count=("deck_slug", "count")).reset_index()
-    grouped["sample_percentage"] = (grouped["deck_count"] / total_decks * 100).round(1)
+    grouped["deck_share_percent"] = (grouped["deck_count"] / total_decks * 100).round(1)
     avg_prices = (
         prices.groupby("deck_archetype", dropna=False)
         .agg(average_estimated_deck_price=("estimated_deck_price", "mean"))

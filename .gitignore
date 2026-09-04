@@ -3,6 +3,8 @@
 __pycache__/
 .pytest_cache/
 .pytest_tmp/
+pytest_tmp*/
+pip_tmp*/
 .mypy_cache/
 .ruff_cache/
 .tmp/
@@ -18,3 +20,6 @@ dist/
 Thumbs.db
 .streamlit/secrets.toml
 data/*.db
+data/imports/ygoprodeck_tournaments/import_manifest.csv
+data/imports/ygoprodeck_tournaments/manual_ydk/*.ydk
+data/imports/ygoprodeck_tournaments/reports/*.json

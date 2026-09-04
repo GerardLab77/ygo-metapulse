@@ -32,7 +32,7 @@ def generate_meta_report(
         return (
             "## Meta Report\n\n"
             "No deck data is available yet. Run the ingestion pipeline to fetch card metadata, "
-            "generate sample decklists, and populate the analytics database."
+            "load decklists, and populate the analytics database."
         )
 
     archetypes = archetype_breakdown(db_path=db_path, decks_df=decks, joined_df=joined).head(3)
@@ -45,7 +45,7 @@ def generate_meta_report(
     trends = trend_velocity(db_path=db_path, decks_df=decks).head(3)
 
     top_archetypes = ", ".join(
-        f"{row.archetype} ({int(row.deck_count)} deck{'s' if row.deck_count != 1 else ''}, {row.sample_percentage:.1f}% share)"
+        f"{row.archetype} ({int(row.deck_count)} deck{'s' if row.deck_count != 1 else ''}, {row.deck_share_percent:.1f}% share)"
         for row in archetypes.itertuples()
     )
     top_main_cards = ", ".join(
@@ -90,6 +90,7 @@ def generate_meta_report(
         trend_line = ", ".join(
             f"{row.archetype} (score {row.trend_score:.3f})" for row in trends.itertuples()
         )
+    caveat = _dataset_caveat(decks)
 
     return f"""## Meta Report
 
@@ -112,4 +113,34 @@ def generate_meta_report(
 
 ### Caveat
 
-_This report is based on the decklists currently loaded into SQLite. Bundled sample lists are illustrative, not verified tournament results; confidence improves as more dated tournament lists are imported._"""
+_{caveat}_"""
+
+
+def _dataset_caveat(decks: pd.DataFrame) -> str:
+    """Describe the evidence level behind the currently loaded report."""
+
+    if "dataset_type" not in decks:
+        return (
+            "This report is based on the decklists currently loaded into SQLite. "
+            "Confidence improves as more dated tournament lists are imported."
+        )
+
+    dataset_types = {
+        str(value).strip().lower()
+        for value in decks["dataset_type"].dropna().tolist()
+        if str(value).strip()
+    }
+    if dataset_types == {"sample"}:
+        return (
+            "This report is based on illustrative sample fixtures, not verified tournament results. "
+            "Use the manual YGOPRODeck import workflow before treating these outputs as metagame evidence."
+        )
+    if dataset_types == {"tournament"}:
+        return (
+            "This report is based on collected top-cut decklists currently loaded into SQLite. "
+            "It does not represent match win rates or the full field at each tournament."
+        )
+    return (
+        "This report includes mixed dataset types. Re-run ingestion in tournament mode to keep verified "
+        "tournament statistics separate from sample fixtures."
+    )

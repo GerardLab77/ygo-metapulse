@@ -6,5 +6,10 @@
   "archetype": "Rescue-ACE",
   "format": "TCG Advanced",
   "source_url": "https://example.com/sample_rescue_ace_top16",
+  "source_site": "Generated sample fixture",
+  "source_category": "illustrative_sample",
+  "access_date": null,
+  "external_deck_id": null,
+  "dataset_type": "sample",
   "notes": "Illustrative sample data generated from local card metadata. Not a verified tournament decklist."
 }

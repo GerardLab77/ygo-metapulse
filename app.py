@@ -178,18 +178,53 @@ def build_engine_frequency(engines_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_dataset_mode(decks_df: pd.DataFrame) -> str:
-    """Classify the current dataset as sample, real, mixed, or empty."""
+    """Classify the current dataset as sample, tournament, mixed, or empty."""
 
     if decks_df.empty or "deck_slug" not in decks_df:
         return "empty"
+    if "dataset_type" in decks_df:
+        dataset_types = {
+            str(value).strip().lower()
+            for value in decks_df["dataset_type"].dropna().tolist()
+            if str(value).strip()
+        }
+        if dataset_types == {"sample"}:
+            return "sample"
+        if dataset_types == {"tournament"}:
+            return "tournament"
+        if "sample" in dataset_types and len(dataset_types) > 1:
+            return "mixed"
+
     deck_slugs = decks_df["deck_slug"].astype(str)
-    has_real_decks = (~deck_slugs.str.startswith("sample_")).any()
+    has_tournament_decks = (~deck_slugs.str.startswith("sample_")).any()
     has_sample_decks = deck_slugs.str.startswith("sample_").any()
-    if has_sample_decks and has_real_decks:
+    if has_sample_decks and has_tournament_decks:
         return "mixed"
-    if has_real_decks:
-        return "real"
+    if has_tournament_decks:
+        return "tournament"
     return "sample"
+
+
+def build_dataset_label(decks_df: pd.DataFrame, dataset_mode: str) -> str:
+    """Return a concise human-readable dataset label."""
+
+    if decks_df.empty:
+        return "No deck dataset loaded."
+    deck_count = int(decks_df["deck_slug"].nunique()) if "deck_slug" in decks_df else len(decks_df)
+    event_count = int(decks_df["event_name"].dropna().nunique()) if "event_name" in decks_df else 0
+    latest_event = "N/A"
+    if "event_date" in decks_df and decks_df["event_date"].notna().any():
+        parsed_dates = pd.to_datetime(decks_df["event_date"], errors="coerce")
+        if parsed_dates.notna().any():
+            latest_event = str(parsed_dates.max().date())
+
+    if dataset_mode == "tournament":
+        return f"Verified tournament snapshot: {deck_count} top-cut decklists from {event_count} events. Last updated: {latest_event}."
+    if dataset_mode == "sample":
+        return f"Illustrative sample fallback: {deck_count} generated decklists. No verified tournament rows loaded."
+    if dataset_mode == "mixed":
+        return f"Mixed dataset: {deck_count} decklists loaded. Re-run ingestion in tournament mode to avoid mixing samples with imported tournament rows."
+    return "No deck dataset loaded."
 
 
 def render_hero(decks_df: pd.DataFrame, joined_df: pd.DataFrame, dataset_mode: str) -> None:
@@ -202,11 +237,12 @@ def render_hero(decks_df: pd.DataFrame, joined_df: pd.DataFrame, dataset_mode: s
         latest_event = str(pd.to_datetime(decks_df["event_date"], errors="coerce").max().date())
 
     dataset_label = {
-        "sample": "Illustrative sample decklists",
-        "real": "Imported tournament dataset",
-        "mixed": "Mixed sample + imported dataset",
+        "sample": "Illustrative sample fallback",
+        "tournament": "Verified tournament snapshot",
+        "mixed": "Mixed sample + tournament dataset",
         "empty": "No deck dataset loaded",
     }[dataset_mode]
+    dataset_detail = build_dataset_label(decks_df, dataset_mode)
 
     hero_html = dedent(
         f"""
@@ -216,6 +252,7 @@ def render_hero(decks_df: pd.DataFrame, joined_df: pd.DataFrame, dataset_mode: s
           <p class="hero-copy">
             Tournament decklist analytics for Yu-Gi-Oh! TCG, built as an end-to-end local pipeline:
             cached YGOPRODeck card metadata, normalized SQLite storage, pandas analysis, and a Streamlit reporting layer.
+            {dataset_detail}
           </p>
           <div class="hero-grid">
             <div class="hero-stat">
@@ -243,20 +280,32 @@ def render_dataset_notice(dataset_mode: str) -> None:
     if dataset_mode == "sample":
         st.info(
             "Showing illustrative sample decklists generated from cached YGOPRODeck card metadata. "
-            "Add non-sample `.ydk` files with matching metadata JSON to analyse imported tournament lists."
+            "They are useful for running the project offline, but they are not verified tournament results. "
+            "Use the manual YGOPRODeck import workflow to load attributed tournament decklists."
         )
     elif dataset_mode == "mixed":
         st.warning(
-            "Both sample and imported deck rows are present. Re-run ingestion to fully sync the dashboard with the deck files on disk."
+            "Both sample and tournament deck rows are present. Re-run ingestion with `python -m src.ingest --dataset tournament` "
+            "after importing verified decklists to keep tournament statistics separate."
         )
-    elif dataset_mode == "real":
-        st.success("Showing imported decklist data from local `.ydk` files and metadata JSON.")
+    elif dataset_mode == "tournament":
+        st.success(
+            "Showing locally imported YGOPRODeck Tournament Meta Decks. These are collected top-cut decklists, "
+            "not match win rates or a complete measurement of every deck entered."
+        )
 
 
 def build_sidebar(
     decks_df: pd.DataFrame,
     joined_df: pd.DataFrame,
-) -> tuple[list[str], tuple[pd.Timestamp | None, pd.Timestamp | None], str, int]:
+) -> tuple[
+    list[str],
+    list[str],
+    list[str],
+    tuple[pd.Timestamp | None, pd.Timestamp | None],
+    str,
+    int,
+]:
     """Render sidebar controls and return the selected filters."""
 
     st.sidebar.header("Controls")
@@ -272,6 +321,18 @@ def build_sidebar(
         "Archetype",
         options=archetype_options,
         default=archetype_options,
+    )
+    event_options = sorted(decks_df["event_name"].dropna().unique().tolist()) if not decks_df.empty else []
+    selected_events = st.sidebar.multiselect(
+        "Event",
+        options=event_options,
+        default=event_options,
+    )
+    placement_options = sorted(decks_df["placement"].dropna().unique().tolist()) if not decks_df.empty else []
+    selected_placements = st.sidebar.multiselect(
+        "Placement",
+        options=placement_options,
+        default=placement_options,
     )
 
     date_series = pd.to_datetime(decks_df["event_date"], errors="coerce") if not decks_df.empty else pd.Series(dtype="datetime64[ns]")
@@ -306,7 +367,40 @@ def build_sidebar(
     st.sidebar.metric("Archetypes", int(decks_df["archetype"].nunique()) if "archetype" in decks_df else 0)
     st.sidebar.metric("Latest event", latest_event)
 
-    return selected_archetypes, (start_date, end_date), section, limit
+    return selected_archetypes, selected_events, selected_placements, (start_date, end_date), section, limit
+
+
+def render_data_provenance(decks_df: pd.DataFrame, dataset_mode: str) -> None:
+    """Show the source scope for the currently loaded deck rows."""
+
+    st.subheader("Data Provenance")
+    if dataset_mode == "sample":
+        st.caption(
+            "Current rows are generated sample fixtures. Verified tournament imports are stored separately under "
+            "`data/tournament_decks/ygoprodeck/` and replace samples during `--dataset auto` ingestion."
+        )
+    else:
+        st.caption(
+            "YGOPRODeck tournament rows are imported from manually downloaded `.ydk` files plus a CSV manifest. "
+            "YGO MetaPulse is not affiliated with or endorsed by YGOPRODeck, Konami, or 4K Media."
+        )
+    provenance_columns = [
+        "deck_slug",
+        "dataset_type",
+        "event_name",
+        "event_date",
+        "placement",
+        "player",
+        "player_count",
+        "archetype",
+        "source_site",
+        "source_category",
+        "source_url",
+        "access_date",
+    ]
+    available_columns = [column for column in provenance_columns if column in decks_df.columns]
+    if available_columns:
+        st.dataframe(decks_df[available_columns].sort_values(["event_date", "deck_slug"], ascending=[False, True]), width="stretch", hide_index=True)
 
 
 def render_empty_state() -> None:
@@ -328,7 +422,14 @@ def main() -> None:
     dataset_mode = get_dataset_mode(decks_df)
     render_hero(decks_df, joined_df, dataset_mode)
     render_dataset_notice(dataset_mode)
-    selected_archetypes, (start_date, end_date), section_filter, row_limit = build_sidebar(decks_df, joined_df)
+    (
+        selected_archetypes,
+        selected_events,
+        selected_placements,
+        (start_date, end_date),
+        section_filter,
+        row_limit,
+    ) = build_sidebar(decks_df, joined_df)
 
     if joined_df.empty or decks_df.empty:
         render_empty_state()
@@ -336,6 +437,8 @@ def main() -> None:
     base_filtered = apply_filters(
         joined_df,
         archetypes=selected_archetypes or None,
+        events=selected_events or None,
+        placements=selected_placements or None,
         start_date=start_date.isoformat() if start_date is not None else None,
         end_date=end_date.isoformat() if end_date is not None else None,
     )
@@ -377,10 +480,10 @@ def main() -> None:
                     archetype_df,
                     x="archetype",
                     y="deck_count",
-                    color="sample_percentage",
-                    text="sample_percentage",
+                    color="deck_share_percent",
+                    text="deck_share_percent",
                     title="Archetype Distribution",
-                    labels={"deck_count": "Deck count", "sample_percentage": "% of sample"},
+                    labels={"deck_count": "Deck count", "deck_share_percent": "Deck share (%)"},
                     color_continuous_scale="Blues",
                 )
                 archetype_chart.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
@@ -452,7 +555,7 @@ def main() -> None:
             summary_columns = [
                 "archetype",
                 "deck_count",
-                "sample_percentage",
+                "deck_share_percent",
                 "average_estimated_deck_price",
             ]
             st.dataframe(
@@ -460,6 +563,7 @@ def main() -> None:
                 width="stretch",
                 hide_index=True,
             )
+        render_data_provenance(filtered_decks, dataset_mode)
 
     with usage_tab:
         st.caption(f"Section filter applied: `{section_filter}`")

@@ -12,6 +12,15 @@ import pandas as pd
 
 from src.config import DB_PATH, ensure_directories
 
+DECK_OPTIONAL_COLUMNS = {
+    "player_count": "INTEGER",
+    "source_site": "TEXT",
+    "source_category": "TEXT",
+    "access_date": "TEXT",
+    "external_deck_id": "TEXT",
+    "dataset_type": "TEXT",
+}
+
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     """Return a SQLite connection with foreign keys enabled."""
@@ -50,9 +59,15 @@ def init_db(db_path: Path | None = None) -> None:
             event_date TEXT,
             placement TEXT,
             player TEXT,
+            player_count INTEGER,
             archetype TEXT,
             format TEXT,
             source_url TEXT,
+            source_site TEXT,
+            source_category TEXT,
+            access_date TEXT,
+            external_deck_id TEXT,
+            dataset_type TEXT,
             notes TEXT,
             created_at TEXT
         );
@@ -73,6 +88,7 @@ def init_db(db_path: Path | None = None) -> None:
     with get_connection(db_path) as connection:
         for statement in schema_statements:
             connection.execute(statement)
+        _ensure_deck_columns(connection)
         connection.commit()
 
 
@@ -142,6 +158,7 @@ def insert_or_update_deck(
 
     init_db(db_path)
     created_at = datetime.now(UTC).isoformat()
+    dataset_type = metadata.get("dataset_type") or ("sample" if deck_slug.startswith("sample_") else "tournament")
     with get_connection(db_path) as connection:
         card_ids = {
             card_id
@@ -166,18 +183,25 @@ def insert_or_update_deck(
         connection.execute(
             """
             INSERT INTO decks (
-                deck_slug, event_name, event_date, placement, player, archetype,
-                format, source_url, notes, created_at
+                deck_slug, event_name, event_date, placement, player, player_count,
+                archetype, format, source_url, source_site, source_category, access_date,
+                external_deck_id, dataset_type, notes, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(deck_slug) DO UPDATE SET
                 event_name = excluded.event_name,
                 event_date = excluded.event_date,
                 placement = excluded.placement,
                 player = excluded.player,
+                player_count = excluded.player_count,
                 archetype = excluded.archetype,
                 format = excluded.format,
                 source_url = excluded.source_url,
+                source_site = excluded.source_site,
+                source_category = excluded.source_category,
+                access_date = excluded.access_date,
+                external_deck_id = excluded.external_deck_id,
+                dataset_type = excluded.dataset_type,
                 notes = excluded.notes;
             """,
             (
@@ -186,9 +210,15 @@ def insert_or_update_deck(
                 metadata.get("event_date"),
                 metadata.get("placement"),
                 metadata.get("player"),
+                _coerce_optional_int(metadata.get("player_count")),
                 metadata.get("archetype"),
                 metadata.get("format"),
                 metadata.get("source_url"),
+                metadata.get("source_site"),
+                metadata.get("source_category"),
+                metadata.get("access_date"),
+                metadata.get("external_deck_id"),
+                dataset_type,
                 metadata.get("notes"),
                 created_at,
             ),
@@ -265,9 +295,15 @@ def get_joined_deck_cards_df(db_path: Path | None = None) -> pd.DataFrame:
             d.event_date,
             d.placement,
             d.player,
+            d.player_count,
             d.archetype AS deck_archetype,
             d.format,
             d.source_url,
+            d.source_site,
+            d.source_category,
+            d.access_date,
+            d.external_deck_id,
+            d.dataset_type,
             d.notes,
             d.created_at,
             dc.section,
@@ -288,3 +324,24 @@ def get_joined_deck_cards_df(db_path: Path | None = None) -> pd.DataFrame:
     """
     with get_connection(db_path) as connection:
         return pd.read_sql_query(query, connection)
+
+
+def _ensure_deck_columns(connection: sqlite3.Connection) -> None:
+    """Add optional provenance columns to existing local databases."""
+
+    existing_columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(decks);").fetchall()
+    }
+    for column_name, column_type in DECK_OPTIONAL_COLUMNS.items():
+        if column_name not in existing_columns:
+            connection.execute(f"ALTER TABLE decks ADD COLUMN {column_name} {column_type};")
+
+
+def _coerce_optional_int(value: object) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

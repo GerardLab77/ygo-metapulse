@@ -5,7 +5,7 @@
 <h1 align="center">YGO MetaPulse</h1>
 
 <p align="center">
-  <strong>Local decklist intelligence for Yu-Gi-Oh! TCG tournament analysis.</strong>
+  <strong>A local Yu-Gi-Oh! TCG decklist analytics pipeline built with Python, SQLite, pandas and Streamlit.</strong>
 </p>
 
 <p align="center">
@@ -19,45 +19,36 @@
 
 ## Overview
 
-Yu-Gi-Oh! decklists are often shared as plain `.ydk` files: useful for players, but awkward for analysis. They contain repeated numeric card IDs split across main, extra and side deck sections, while the useful context about each card lives elsewhere.
+Yu-Gi-Oh! decklists are commonly shared as `.ydk` files. They are easy to load into simulators, but they are not immediately useful for analysis: each card appears as a numeric ID, repeated copies are separate lines, and tournament context usually lives outside the deck file.
 
-YGO MetaPulse turns those files into a local analytics pipeline. It parses `.ydk` decklists, joins them to cached YGOPRODeck card metadata, stores the normalized data in SQLite, and exposes metagame views through a Streamlit dashboard.
+YGO MetaPulse turns those local deck files into a small analytics warehouse. It parses main, extra and side deck sections, joins card IDs to cached YGOPRODeck card metadata, stores the normalized result in SQLite, and exposes metagame views through a Streamlit dashboard.
 
-The project deliberately avoids web scraping. Decklists come from local imports in `data/decks/` with matching metadata JSON files in `data/deck_metadata/`. The YGOPRODeck API is used only for card metadata, and the response is cached locally in `data/raw/cards_cache.json`.
+The repository includes illustrative sample decklists so the app works immediately after setup. Those samples use real card IDs from the cached card database, but they are not verified tournament results. Verified tournament decklists are kept in a separate import path and are loaded by default once present.
 
-The repository includes illustrative sample decklists so the application can be run immediately after setup. These samples use real card IDs resolved from YGOPRODeck metadata, but they are not claimed to be verified tournament decklists.
+YGOPRODeck is used as the source for card metadata via its public API. Tournament decklists should be imported from manually downloaded `.ydk` files plus an attribution manifest; the project does not scrape deck pages or bypass access controls.
 
-With the included sample inputs, the pipeline currently loads:
-
-- `14,369` cached card metadata records from YGOPRODeck.
-- `16` illustrative decklists across `12` archetype labels.
-- `311` unique cards appearing in the loaded decklists.
-
-## Current Screenshots
-
-Dashboard overview:
+## Current Screenshot
 
 ![Dashboard Overview](docs/screenshots/dashboard-overview.png)
 
-Card usage view:
+Additional screenshots:
 
 ![Card Usage](docs/screenshots/card-usage.png)
-
-Generated meta report:
 
 ![Meta Report](docs/screenshots/meta-report.png)
 
 ## Key Capabilities
 
-- Fetches Yu-Gi-Oh! card metadata from the YGOPRODeck card database endpoint.
-- Caches API responses locally to avoid repeatedly hitting the public API.
+- Fetches card metadata from the YGOPRODeck card database endpoint and caches it in `data/raw/cards_cache.json`.
 - Parses `.ydk` files into main, extra and side deck card quantities.
-- Requires matching deck metadata JSON for event name, event date, placement, player, archetype, format and source notes.
-- Stores cards, decks and deck-card relationships in a normalized SQLite schema.
-- Re-runs ingestion idempotently by updating deck metadata and replacing deck-card mappings for each deck slug.
-- Computes archetype breakdowns, most-played cards, inclusion rates, side-deck trends, deck price estimates, banlist-sensitive cards and rule-based engine detection.
-- Generates a deterministic markdown meta report from the analytics layer without requiring an LLM call.
-- Provides automated tests for parsing, database idempotency, ingestion behaviour, sample data assumptions and analytics outputs.
+- Stores cards, deck metadata and deck-card quantities in a normalized SQLite database.
+- Rebuilds deck data idempotently so repeated ingestion does not duplicate deck rows or card mappings.
+- Separates generated sample fixtures from verified tournament imports.
+- Validates manually imported tournament decklists for deck size, malformed YDK files, duplicate sources and unknown card IDs.
+- Produces machine-readable import reports for accepted, incomplete and rejected tournament rows.
+- Calculates archetype share, card usage, inclusion rates, staple usage, side-deck trends, estimated deck prices, banlist-sensitive cards and simple engine detections.
+- Generates a deterministic markdown meta report without requiring an LLM or external service.
+- Runs automated tests through pytest and GitHub Actions.
 
 ## Architecture And Data Flow
 
@@ -65,36 +56,36 @@ Generated meta report:
 flowchart LR
     A["YGOPRODeck API<br/>card metadata"] --> B["Local cache<br/>data/raw/cards_cache.json"]
     B --> C["Card ingestion<br/>src/fetch_cards.py"]
-    D["Local .ydk decklists<br/>data/decks/"] --> E["YDK parser<br/>src/parse_ydk.py"]
-    F["Deck metadata JSON<br/>data/deck_metadata/"] --> G["Deck ingestion<br/>src/ingest.py"]
-    E --> G
-    C --> H["SQLite database<br/>data/ygo_metapulse.db"]
-    G --> H
-    H --> I["Analytics layer<br/>src/analysis.py"]
-    I --> J["Streamlit dashboard<br/>app.py"]
-    I --> K["Markdown report<br/>src/report.py"]
+    D["Sample .ydk fixtures<br/>data/decks/"] --> E["YDK parser<br/>src/parse_ydk.py"]
+    F["Manual tournament imports<br/>data/imports/ygoprodeck_tournaments/"] --> G["Import validator<br/>scripts/import_ygoprodeck_tournaments.py"]
+    G --> H["Verified tournament deck files<br/>data/tournament_decks/ygoprodeck/"]
+    E --> I["Deck ingestion<br/>src/ingest.py"]
+    H --> I
+    C --> J["SQLite database<br/>data/ygo_metapulse.db"]
+    I --> J
+    J --> K["Analytics layer<br/>src/analysis.py"]
+    K --> L["Streamlit dashboard<br/>app.py"]
+    K --> M["Markdown report<br/>src/report.py"]
 ```
 
-The ingestion flow is:
+The pipeline runs in these stages:
 
-1. Load card metadata from `data/raw/cards_cache.json`, or fetch it from YGOPRODeck if the cache is missing or refresh is requested.
-2. Upsert card metadata into the `cards` table, including selected fields such as name, type, frame type, archetype, TCG banlist status and Cardmarket price.
-3. Discover local `.ydk` files in `data/decks/`.
-4. Prefer non-sample deck files over bundled `sample_*` files when imported lists are present.
-5. Parse main, extra and side deck sections into card quantities.
-6. Join each deck file to metadata JSON with the same stem.
-7. Insert or update deck rows and replace their deck-card mappings.
-8. Query SQLite into pandas dataframes for dashboard and report generation.
+1. Load card metadata from the local cache, or fetch it from YGOPRODeck if the cache is missing or a refresh is requested.
+2. Upsert card records into SQLite with selected metadata such as name, type, frame type, archetype, TCG banlist status and Cardmarket price.
+3. Choose the deck dataset. `auto` mode prefers verified tournament imports, then non-sample local imports, then generated sample fixtures.
+4. Parse `.ydk` deck sections into card quantities.
+5. Read matching metadata JSON for event, player, placement, archetype, source and provenance fields.
+6. Insert or update deck rows and replace deck-card mappings.
+7. Query SQLite into pandas dataframes for dashboard analytics and report generation.
 
 ## Technical Decisions
 
-- **No scraping in the current version:** decklists are intentionally imported from local files so the pipeline stays reproducible and source handling is explicit.
-- **SQLite for local analytics:** the database is simple to create, inspect and reset. `data/ygo_metapulse.db` is generated locally and ignored by Git.
-- **Cached card metadata:** the raw YGOPRODeck payload is committed as a local cache so the sample workflow can run even when the API is unavailable.
-- **Normalized schema:** card metadata, deck metadata and deck-card quantities are separated into `cards`, `decks` and `deck_cards`.
-- **Idempotent ingestion:** re-running `python -m src.ingest` updates existing deck slugs instead of duplicating rows.
-- **Deterministic reporting:** `src/report.py` generates a readable markdown summary from pandas outputs without depending on external AI services.
-- **Single dependency source:** runtime and development dependencies are declared in `pyproject.toml`; `requirements.txt` installs the project with its dev extras for the standard setup workflow.
+- **Local-first ingestion:** SQLite, local files and a cached card payload make the project reproducible without hosted infrastructure.
+- **No deck-page scraping:** YGOPRODeck decklists are imported from local files with explicit attribution rather than scraped from site pages.
+- **Clear dataset modes:** sample fixtures are useful for onboarding, but tournament analytics only use imported tournament rows when they exist.
+- **Idempotent writes:** each deck slug is upserted and its card mappings are replaced, which keeps repeated ingestion safe.
+- **Dependency clarity:** dependencies live in `pyproject.toml`; `requirements.txt` installs the project with development extras for the standard setup path.
+- **Deterministic reporting:** the report is generated from pandas outputs, so it can run in CI or offline without secrets.
 
 ## Setup
 
@@ -139,6 +130,37 @@ On Windows, if `python` points to the Microsoft Store placeholder, use the inclu
 
 The dashboard opens at `http://localhost:8501/` by default.
 
+## Importing Tournament Decklists
+
+The curated source category is [YGOPRODeck Tournament Meta Decks (TCG)](https://ygoprodeck.com/category/format/tournament%20meta%20decks). YGO MetaPulse is not affiliated with or endorsed by YGOPRODeck, Konami or 4K Media.
+
+To import verified tournament decklists:
+
+1. Browse the YGOPRODeck Tournament Meta Decks (TCG) category manually.
+2. Download decklists using the site-provided YDK download action where available.
+3. Place the downloaded `.ydk` files in `data/imports/ygoprodeck_tournaments/manual_ydk/`.
+4. Copy `data/imports/ygoprodeck_tournaments/import_manifest_template.csv` to `data/imports/ygoprodeck_tournaments/import_manifest.csv`.
+5. Fill the manifest with the deck filename, event name, date, placement, player, player count, archetype, format, source URL and access date.
+6. Validate the batch without writing outputs:
+
+```bash
+python scripts/import_ygoprodeck_tournaments.py --dry-run --limit 50
+```
+
+7. Import validated rows:
+
+```bash
+python scripts/import_ygoprodeck_tournaments.py --limit 50
+```
+
+8. Rebuild the database. `auto` mode will prefer the imported tournament decklists over samples:
+
+```bash
+python -m src.ingest --dataset auto
+```
+
+The importer writes normalized tournament files to `data/tournament_decks/ygoprodeck/` and a machine-readable report to `data/imports/ygoprodeck_tournaments/reports/`.
+
 ## Testing
 
 Run the test suite:
@@ -149,38 +171,11 @@ pytest
 
 The GitHub Actions workflow in `.github/workflows/ci.yml` runs the same test command on pushes and pull requests for Python 3.11 and 3.12.
 
-## Repository Layout
-
-```text
-ygo-metapulse/
-  app.py
-  pyproject.toml
-  requirements.txt
-  run_project.ps1
-  .github/workflows/ci.yml
-  data/
-    raw/cards_cache.json
-    decks/
-    deck_metadata/
-  docs/
-    assets/ygo-metapulse-logo.png
-    screenshots/
-  src/
-    analysis.py
-    config.py
-    db.py
-    fetch_cards.py
-    ingest.py
-    parse_ydk.py
-    report.py
-    sample_data.py
-  tests/
-```
-
 ## Limitations And Future Work
 
-- Included sample decklists are illustrative, not verified tournament results.
-- Trend velocity is intentionally simple and becomes more meaningful with a larger dated dataset.
-- Price estimates depend on Cardmarket values exposed through YGOPRODeck metadata.
-- The current storage layer is SQLite; PostgreSQL would be a better fit for multi-user or deployed workflows.
-- Future work could add richer import validation, historical trend tracking, automated tournament-source ingestion where permitted, matchup data and online deployment.
+- The committed decklists are illustrative fixtures unless a verified tournament import has been added.
+- Tournament imports represent collected top-cut decklists, not match win rates or a complete count of every deck entered at each event.
+- Some event metadata may be unavailable from a source page; missing values are stored as null rather than invented.
+- Price estimates depend on Cardmarket values present in the cached YGOPRODeck metadata.
+- Trend velocity is intentionally simple and becomes more useful with a larger dated dataset.
+- Future work could add PostgreSQL, richer source adapters where permitted, historical snapshots, matchup data and an online deployment.
