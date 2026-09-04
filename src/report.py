@@ -112,4 +112,4 @@ def generate_meta_report(
 
 ### Caveat
 
-_This report is based on a compact imported decklist sample. Confidence improves as more dated tournament lists are added to the dataset._"""
+_This report is based on the decklists currently loaded into SQLite. Bundled sample lists are illustrative, not verified tournament results; confidence improves as more dated tournament lists are imported._"""

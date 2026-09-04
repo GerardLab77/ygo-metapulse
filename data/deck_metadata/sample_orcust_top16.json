@@ -6,5 +6,5 @@
   "archetype": "Orcust",
   "format": "TCG Advanced",
   "source_url": "https://example.com/sample_orcust_top16",
-  "notes": "Illustrative sample data generated from local card metadata for portfolio demo purposes."
+  "notes": "Illustrative sample data generated from local card metadata. Not a verified tournament decklist."
 }

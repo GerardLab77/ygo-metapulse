@@ -9,7 +9,7 @@ from pathlib import Path
 
 from src.config import DECKS_DIR, DECK_METADATA_DIR, ensure_directories
 
-SAMPLE_NOTES = "Illustrative sample data generated from local card metadata for portfolio demo purposes."
+SAMPLE_NOTES = "Illustrative sample data generated from local card metadata. Not a verified tournament decklist."
 
 COMMON_MAIN_FILLERS = [
     "Ash Blossom & Joyous Spring",

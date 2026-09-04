@@ -193,7 +193,7 @@ def get_dataset_mode(decks_df: pd.DataFrame) -> str:
 
 
 def render_hero(decks_df: pd.DataFrame, joined_df: pd.DataFrame, dataset_mode: str) -> None:
-    """Render a portfolio-style hero panel at the top of the dashboard."""
+    """Render the dashboard hero panel."""
 
     total_decks = int(decks_df["deck_slug"].nunique()) if not decks_df.empty and "deck_slug" in decks_df else 0
     total_cards = int(joined_df["card_id"].nunique()) if not joined_df.empty and "card_id" in joined_df else 0
@@ -202,7 +202,7 @@ def render_hero(decks_df: pd.DataFrame, joined_df: pd.DataFrame, dataset_mode: s
         latest_event = str(pd.to_datetime(decks_df["event_date"], errors="coerce").max().date())
 
     dataset_label = {
-        "sample": "Illustrative demo dataset",
+        "sample": "Illustrative sample decklists",
         "real": "Imported tournament dataset",
         "mixed": "Mixed sample + imported dataset",
         "empty": "No deck dataset loaded",
@@ -211,10 +211,10 @@ def render_hero(decks_df: pd.DataFrame, joined_df: pd.DataFrame, dataset_mode: s
     hero_html = dedent(
         f"""
         <div class="hero-panel">
-          <div class="hero-kicker">Portfolio Project • Data Engineering + Analytics</div>
+          <div class="hero-kicker">Decklist Intelligence • Data Engineering + Analytics</div>
           <div class="hero-title">YGO MetaPulse</div>
           <p class="hero-copy">
-            Tournament decklist analytics for Yu-Gi-Oh! TCG, built as a compact end-to-end pipeline:
+            Tournament decklist analytics for Yu-Gi-Oh! TCG, built as an end-to-end local pipeline:
             cached YGOPRODeck card metadata, normalized SQLite storage, pandas analysis, and a Streamlit reporting layer.
           </p>
           <div class="hero-grid">
@@ -242,8 +242,8 @@ def render_dataset_notice(dataset_mode: str) -> None:
 
     if dataset_mode == "sample":
         st.info(
-            "Showing illustrative sample data. For a portfolio build, this is intentional: the dashboard is reproducible "
-            "out of the box while still using live YGOPRODeck card metadata."
+            "Showing illustrative sample decklists generated from cached YGOPRODeck card metadata. "
+            "Add non-sample `.ydk` files with matching metadata JSON to analyse imported tournament lists."
         )
     elif dataset_mode == "mixed":
         st.warning(
@@ -261,7 +261,7 @@ def build_sidebar(
 
     st.sidebar.header("Controls")
     force_refresh = st.sidebar.checkbox("Force refresh card metadata", value=False)
-    if st.sidebar.button("Run ingestion / refresh data", type="primary", use_container_width=True):
+    if st.sidebar.button("Run ingestion / refresh data", type="primary", width="stretch"):
         with st.spinner("Refreshing card metadata, syncing deck files, and rebuilding analytics tables..."):
             run_ingestion(force_refresh)
         st.sidebar.success("Ingestion completed.")
@@ -385,7 +385,7 @@ def main() -> None:
                 )
                 archetype_chart.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
                 archetype_chart.update_layout(showlegend=False)
-                st.plotly_chart(archetype_chart, use_container_width=True)
+                st.plotly_chart(archetype_chart, width="stretch")
             else:
                 st.caption("No archetype rows available for the selected filters.")
         with right:
@@ -409,7 +409,7 @@ def main() -> None:
                     color_continuous_scale="Tealgrn",
                 )
                 deck_price_chart.update_layout(showlegend=False)
-                st.plotly_chart(deck_price_chart, use_container_width=True)
+                st.plotly_chart(deck_price_chart, width="stretch")
             else:
                 st.caption("Price data becomes richer when Cardmarket values are available in the API cache.")
 
@@ -417,7 +417,7 @@ def main() -> None:
             """
             <div class="section-note">
               <strong>What this view is showing:</strong> archetype share, estimated market value, and a lightweight trend layer intended
-              to demonstrate how imported decklists can be transformed into an interview-ready analytics product.
+              to show how imported decklists can be transformed into structured metagame analysis.
             </div>
             """,
             unsafe_allow_html=True,
@@ -443,7 +443,7 @@ def main() -> None:
                 )
                 trend_chart.update_traces(textposition="outside")
                 trend_chart.update_layout(showlegend=False)
-                st.plotly_chart(trend_chart, use_container_width=True)
+                st.plotly_chart(trend_chart, width="stretch")
                 st.caption(trend_df["note"].iloc[0])
             else:
                 st.caption("Trend velocity appears after dated deck metadata is available.")
@@ -457,7 +457,7 @@ def main() -> None:
             ]
             st.dataframe(
                 archetype_df[summary_columns].head(row_limit),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 
@@ -481,8 +481,8 @@ def main() -> None:
                 labels={"deck_inclusion_rate": "Inclusion rate (%)", "card_name": "Card"},
                 color_continuous_scale="Viridis",
             )
-            st.plotly_chart(chart, use_container_width=True)
-            st.dataframe(usage_df, use_container_width=True, hide_index=True)
+            st.plotly_chart(chart, width="stretch")
+            st.dataframe(usage_df, width="stretch", hide_index=True)
 
         staples_df = staple_usage(
             section="main" if section_filter == "all" else section_filter,
@@ -490,7 +490,7 @@ def main() -> None:
             joined_df=base_filtered if section_filter == "all" else chart_source,
         )
         st.subheader("Cross-Archetype Staples")
-        st.dataframe(staples_df, use_container_width=True, hide_index=True)
+        st.dataframe(staples_df, width="stretch", hide_index=True)
 
     with side_tab:
         st.markdown(
@@ -511,8 +511,8 @@ def main() -> None:
                 labels={"total_copies": "Copies", "card_name": "Card", "decks_seen": "Decks seen"},
                 color_continuous_scale="Sunset",
             )
-            st.plotly_chart(side_chart, use_container_width=True)
-            st.dataframe(side_df, use_container_width=True, hide_index=True)
+            st.plotly_chart(side_chart, width="stretch")
+            st.dataframe(side_df, width="stretch", hide_index=True)
 
     with engine_tab:
         engines_df = engine_detection(joined_df=base_filtered)
@@ -520,7 +520,7 @@ def main() -> None:
         left, right = st.columns([1.2, 1])
         with left:
             st.subheader("Detected Engines by Deck")
-            st.dataframe(engines_df, use_container_width=True, hide_index=True)
+            st.dataframe(engines_df, width="stretch", hide_index=True)
         with right:
             if not engine_frequency_df.empty:
                 engine_chart = px.bar(
@@ -532,7 +532,7 @@ def main() -> None:
                     color_continuous_scale="Mint",
                 )
                 engine_chart.update_layout(showlegend=False)
-                st.plotly_chart(engine_chart, use_container_width=True)
+                st.plotly_chart(engine_chart, width="stretch")
             else:
                 st.caption("No engine keywords were detected in the filtered sample.")
 
@@ -545,21 +545,21 @@ def main() -> None:
         if banlist_df.empty:
             st.success("No forbidden, limited, or semi-limited cards were surfaced in the current sample.")
         else:
-            st.dataframe(banlist_df, use_container_width=True, hide_index=True)
+            st.dataframe(banlist_df, width="stretch", hide_index=True)
 
     with report_tab:
         if "meta_report" not in st.session_state:
             st.session_state["meta_report"] = generate_meta_report(decks_df=filtered_decks, joined_df=base_filtered)
         if st.button("Regenerate report"):
             st.session_state["meta_report"] = generate_meta_report(decks_df=filtered_decks, joined_df=base_filtered)
-        st.caption("Narrative report generated deterministically from the analytics layer. No LLM is required for the MVP.")
+        st.caption("Narrative report generated deterministically from the analytics layer. No LLM call is required.")
         st.markdown(st.session_state["meta_report"])
 
     with raw_tab:
         st.subheader("Decks")
-        st.dataframe(filtered_decks, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_decks, width="stretch", hide_index=True)
         st.subheader("Joined Deck / Card Rows")
-        st.dataframe(base_filtered, use_container_width=True, hide_index=True)
+        st.dataframe(base_filtered, width="stretch", hide_index=True)
         st.caption(f"Loaded {len(cards_df):,} cached card metadata rows.")
 
 

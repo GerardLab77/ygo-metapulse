@@ -1,7 +1,5 @@
-# Screenshot Placeholders
+# Dashboard Screenshots
 
-Add dashboard screenshots here before publishing the project:
+These images are captured from the running Streamlit application using the bundled illustrative sample decklists.
 
-- `dashboard-overview.png`
-- `card-usage.png`
-- `meta-report.png`
+Regenerate them after meaningful dashboard UI or copy changes so the README reflects the current application.

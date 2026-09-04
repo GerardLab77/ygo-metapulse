@@ -5,20 +5,28 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ygo-metapulse"
 version = "0.1.0"
-description = "End-to-end Yu-Gi-Oh! tournament decklist intelligence platform."
+description = "End-to-end Yu-Gi-Oh! decklist analytics pipeline built with Python, SQLite, pandas and Streamlit."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-  { name = "OpenAI Codex" }
+  { name = "GerardLab77" }
 ]
 dependencies = [
-  "streamlit>=1.45,<2.0",
+  "streamlit>=1.63,<2.0",
   "pandas>=2.2,<3.0",
   "requests>=2.32,<3.0",
   "plotly>=5.24,<6.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9.0",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "-q --basetemp=.pytest_tmp -p no:cacheprovider"
+addopts = "-q -p no:cacheprovider"
+
+[tool.setuptools.packages.find]
+include = ["src*"]

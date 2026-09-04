@@ -61,13 +61,15 @@ def ingest_decks() -> int:
 def run_full_ingestion(force_refresh: bool = False) -> None:
     """Run the full metadata, sample data, and deck ingestion workflow."""
 
-    ensure_sample_metadata_files(overwrite=True)
-    real_deck_files = _discover_deck_files()[0]
+    ensure_sample_metadata_files(overwrite=False)
+    real_deck_files, sample_deck_files = _discover_deck_files()
     cards = ingest_cards(force_refresh=force_refresh)
     if real_deck_files:
         logger.info("Detected real deck files in %s. Skipping sample deck generation.", DECKS_DIR)
+    elif sample_deck_files:
+        logger.info("Using existing sample deck files in %s.", DECKS_DIR)
     else:
-        ensure_sample_deck_files(cards, overwrite=True)
+        ensure_sample_deck_files(cards, overwrite=False)
     ingest_decks()
 
 
