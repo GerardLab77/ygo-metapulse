@@ -71,3 +71,15 @@ def test_parse_ydk_raises_on_invalid_card_id(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Invalid card ID"):
         parse_ydk_file(deck_path)
+
+
+@pytest.mark.parametrize("card_id", ["0", "-1"])
+def test_parse_ydk_rejects_non_positive_card_ids(tmp_path: Path, card_id: str) -> None:
+    deck_path = tmp_path / "non_positive.ydk"
+    deck_path.write_text(
+        "\n".join(["#main", card_id]),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Expected a positive integer"):
+        parse_ydk_file(deck_path)

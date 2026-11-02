@@ -48,6 +48,10 @@ def parse_ydk_file(path: Path) -> dict[str, dict[int, int]]:
                 raise ValueError(
                     f"Invalid card ID '{line}' in {path.name} on line {line_number}. Expected an integer."
                 ) from exc
+            if card_id <= 0:
+                raise ValueError(
+                    f"Invalid card ID '{line}' in {path.name} on line {line_number}. Expected a positive integer."
+                )
             sections[current_section][card_id] += 1
 
     if not saw_main:
